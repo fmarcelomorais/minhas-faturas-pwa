@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Fortal Telecom",
-  "short_name": "Fortal",
+  "name": "Minhas Faturas Telecom",
+  "short_name": "Minhas Faturas",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

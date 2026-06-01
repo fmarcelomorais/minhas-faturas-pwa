@@ -21,20 +21,20 @@
 
     body {
       background: #0f172a;
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
       color: white;
+      padding: 20px 0;
     }
 
     .container {
       width: 90%;
-      max-width: 350px;
+      max-width: 450px;
       background: #1e293b;
       padding: 30px;
       border-radius: 20px;
-      text-align: center;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
 
@@ -85,6 +85,15 @@
       background: #2563eb;
     }
 
+    .cliente-card,
+    .fatura-card {
+      background: #063d8b;
+      padding: 20px;
+      border-radius: 12px;
+      margin: 15px 0;
+      text-align: left;
+    }
+
     .fatura-card {
       background: #063d8b;
       padding: 25px;
@@ -119,7 +128,7 @@
       maxlength="14"
     />
 
-    <button onclick="enviarCPF()">
+    <button onclick="obterCliente()">
       Acessar
     </button>
 
@@ -127,9 +136,11 @@
     <div id="resultado" style="display:none; margin-top:30px;">
 
       <h2 style="margin-bottom:15px;">
-        Faturas
+        Minhas Faturas
       </h2>
 
+      <div id="cliente"></div>
+      
       <div id="listaFaturas"></div>
 
     </div>
@@ -150,91 +161,172 @@
       e.target.value = value;
     });
 
-    async function enviarCPF() {
-      const cpf = cpfInput.value;
+    async function obterFaturas(idCliente) {
 
-      if (!cpf || cpf.length < 14) {
-        alert('Digite um CPF válido');
-        return;
-      }
+      try {
 
-
-      try{
-
-        const response = await fetch( `https://isp-hub-api-production-cfe2.up.railway.app/api/ixc/faturas/${cpf}`);
-        const dados = await response.json();
-        console.log(dados)
-
-        if (!dados.registros || !dados.registros.length) {
-            alert('Nenhuma fatura encontrada');
-            return;
-          }
+        const contratosResponse = await fetch(
+          `http://localhost:5000/api/ixc/contratos/${idCliente}`
+        );
 
         const lista = document.getElementById('listaFaturas');
+        lista.innerHTML = '';
 
-          lista.innerHTML = '';
+        const contratos = await contratosResponse.json()
 
-          dados.registros.forEach((fatura, index) => {
+        if (!contratos.registros || !contratos.registros.length) {
+          alert('Nenhum contrato encontrado');
+          return;
+        }
 
-            const card = document.createElement('div');
+        const idContrato = contratos.registros.filter(c => c.status === 'A');
+        
+        const faturaResponse = await fetch(
+          `http://localhost:5000/api/ixc/financeiro/${idContrato[0].id}`
+        );
 
-            card.className = 'fatura-card';
+        const faturas = await faturaResponse.json();
 
-            card.innerHTML = `
-              <p>
-                <strong>Valor:</strong>
-                ${Number(fatura.valor).toLocaleString(
-                  'pt-BR',
-                  {
-                    style: 'currency',
-                    currency: 'BRL'
-                  }
-                )}
-              </p>
+        if (!faturas.registros || !faturas.registros.length) {
+          alert('Nenhuma fatura encontrada');
+          return;
+        }
 
-              <p>
-                <strong>Vencimento:</strong>
-                ${new Date(
-                  fatura.data_vencimento
-                ).toLocaleDateString('pt-BR')}
-              </p>
+        const faturasEmAberto =
+          faturas.registros.filter(
+            f => f.status === 'A'
+          );
 
-              <p>
-                <strong>Status:</strong>
-                ${fatura.status === 'A' ? 'Aberta' : fatura.status}
-              </p>
+        if (!faturasEmAberto.length) {
+          alert('Nenhuma fatura em aberto');
+          return;
+        }
 
-              <button onclick="copiarLinha(${index})">
-                Copiar Código
-              </button>
+        window.faturas = faturasEmAberto;
 
-              <button onclick="abrirBoleto(${index})">
-                Abrir Boleto
-              </button>
-            `;
+        faturasEmAberto.forEach((fatura, index) => {
 
-            lista.appendChild(card);
-          });
+          const card = document.createElement('div');
 
-          window.faturas = dados.registros;
+          card.className = 'fatura-card';
+          card.innerHTML = '';
+          card.innerHTML = `
+          <h3 style="margin-botton:10">Fatura referente ao contrato: ${fatura.id_contrato} | Cliente: ${fatura.id_cliente}</h3>
+            <p>
+              <strong>Valor:</strong>
+              ${Number(fatura.valor).toLocaleString(
+                'pt-BR',
+                {
+                  style: 'currency',
+                  currency: 'BRL'
+                }
+              )}
+            </p>
 
-          document.getElementById('resultado').style.display = 'block';
-                          
-          console.log('Quantidade:', dados.registros.length);
-      }catch{
+            <p>
+              <strong>Vencimento:</strong>
+              ${new Date(
+                fatura.data_vencimento
+              ).toLocaleDateString('pt-BR')}
+            </p>
 
+            <p>
+              <strong>Status:</strong>
+              Aberta
+            </p>
+
+            <button onclick="copiarLinha(${index})">
+              Copiar Código
+            </button>
+
+            <button onclick="abrirBoleto(${index})">
+              Abrir Boleto
+            </button>
+          `;
+
+          lista.appendChild(card);
+
+        });
+
+      } catch (error) {
+
+        console.error(error);
+
+        alert('Erro ao consultar faturas');
       }
-      
     }
 
-    // Registrar Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log('PWA ativo'));
+    async function obterCliente() {
+
+      const cpf = cpfInput.value
+
+      try {
+
+        const response = await fetch(
+          `http://localhost:5000/api/ixc/cliente/${cpf}`
+        );
+
+        const dados = await response.json();
+
+        const clientes = document.getElementById('cliente');
+
+        clientes.innerHTML = '<h2>CONTRATOS</h2><br><br>';
+
+        if (!dados.registros || !dados.registros.length) {
+          alert('Cliente não encontrado');
+          return;
+        }
+
+        dados.registros.forEach(cliente => {
+
+          const card = document.createElement('div');
+
+          card.className = 'cliente-card';
+
+          card.innerHTML = `
+            <p><strong>Cliente: ${cliente.razao}</strong></p>
+            <br>
+            <p><strong>Código Cliente: ${cliente.id}</strong></p>
+            <br>
+            <button onclick="obterFaturas(${cliente.id})">
+              Ver Faturas
+            </button>
+          `;
+
+          clientes.appendChild(card);
+
+        });
+
+        document.getElementById('resultado').style.display = 'block';
+
+      } catch (error) {
+
+        console.error(error);
+
+        alert('Erro ao consultar cliente');
+      }
     }
 
+    async function obterContratos(idCliente){
+
+      try {
+        
+        const response = await fetch( `http://localhost:5000/api/ixc/contratos/${idCliente}`);
+        const dados = await response.json();   
+        console.log(dados)
+        const contratos = document.getElementById('contratos'); 
+           
+         contratos.innerHTML = '';
+        
+      } catch (error) {
+        
+      }
+
+    }
+
+    
     function copiarLinha(index) {
-
+      
       navigator.clipboard.writeText(
         window.faturas[index].linha_digitavel
       );
@@ -242,12 +334,18 @@
       alert('Código copiado!');
     }
 
-  function abrirBoleto(index) {
+    function abrirBoleto(index) {
     window.open(
       window.faturas[index].gateway_link,
       '_blank'
     );
   }
+    // Registrar Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('PWA ativo'));
+    }
+
   </script>
 
 </body>
