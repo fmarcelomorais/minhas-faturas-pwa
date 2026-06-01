@@ -149,6 +149,7 @@
 
   <script>
     // Máscara CPF
+    const urlBase = 'https://isp-hub-api-production-cfe2.up.railway.app';
     const cpfInput = document.getElementById('cpf');
 
     cpfInput.addEventListener('input', (e) => {
@@ -166,7 +167,7 @@
       try {
 
         const contratosResponse = await fetch(
-          `http://localhost:5000/api/ixc/contratos/${idCliente}`
+          `${urlBase}/contratos/${idCliente}`
         );
 
         const lista = document.getElementById('listaFaturas');
@@ -182,7 +183,7 @@
         const idContrato = contratos.registros.filter(c => c.status === 'A');
         
         const faturaResponse = await fetch(
-          `http://localhost:5000/api/ixc/financeiro/${idContrato[0].id}`
+          `${urlBase}/ixc/financeiro/${idContrato[0].id}`
         );
 
         const faturas = await faturaResponse.json();
@@ -263,7 +264,7 @@
       try {
 
         const response = await fetch(
-          `http://localhost:5000/api/ixc/cliente/${cpf}`
+          `${urlBase}/ixc/cliente/${cpf}`
         );
 
         const dados = await response.json();
