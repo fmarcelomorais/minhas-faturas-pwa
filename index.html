@@ -183,7 +183,7 @@
         const idContrato = contratos.registros.filter(c => c.status === 'A');
         
         const faturaResponse = await fetch(
-          `${urlBase}/ixc/financeiro/${idContrato[0].id}`
+          `${urlBase}/financeiro/${idContrato[0].id}`
         );
 
         const faturas = await faturaResponse.json();
